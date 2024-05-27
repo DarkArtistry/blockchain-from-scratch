@@ -136,7 +136,7 @@ impl StateMachine for DigitalCashSystem {
                 // Spending Bills with incorect amount
                 let is_valid_spends: u64 = spends.iter().map(|each_bill| {
                     // spending and receiving same bills
-                    if !current_state.bills.contains(&each_bill) {
+                    if !current_state.bills.contains(each_bill) {
                         return 1
                     }
                     if double_spend_checker.contains(each_bill) {
