@@ -94,7 +94,71 @@ impl StateMachine for DigitalCashSystem {
     type Transition = CashTransaction;
 
     fn next_state(starting_state: &Self::State, t: &Self::Transition) -> Self::State {
-        todo!("Exercise 1")
+        // todo!("Exercise 1")
+        let mut current_state = starting_state.clone();
+        match t {
+            CashTransaction::Mint { minter, amount } => {
+                let new_bill = Bill{
+                    owner: minter.clone(),
+                    amount: amount.clone(),
+                    serial: current_state.next_serial()
+                };
+                current_state.add_bill(new_bill);
+            }
+            CashTransaction::Transfer { spends, receives } => {
+                // let spends_clone = spends.iter().filter(|each_bill| current_state.bills.contains(each_bill)).cloned();
+                let total_spent: u64 = spends.iter().map(|each_bill| each_bill.amount).sum();
+                let total_received: u64 = receives.iter().map(|each_bill| each_bill.amount).sum();
+                let spend_serials: Vec<u64> = spends.iter().map(|each_bill| each_bill.serial.clone()).collect();
+                // if there's a bill that is not valid, cancel all transfers
+                let is_valid_receive: u64 = receives.iter().map(|each_bill| {
+                    // spending and receiving same bills
+                    if spend_serials.contains(&each_bill.serial) {
+                        return 1
+                    }
+                    if each_bill.serial >= current_state.next_serial() + receives.len() as u64 {
+                        return 1;
+                    }
+                    if each_bill.amount <= 0 {
+                        return 1;
+                    }
+                    // Check for overflow using checked_add
+                    if each_bill.amount.checked_add(1).is_none() {
+                        println!("DETECTED MAX VALUE");
+                        return 1;
+                    } else {
+                        println!("NO MAX VALUE DETECTED");
+                    }
+                    // serial_number already seen fails
+                    return 0;
+                }).sum();
+                let mut double_spend_checker: Vec<Bill> = Vec::new();
+                // Spending Bills with incorect amount
+                let is_valid_spends: u64 = spends.iter().map(|each_bill| {
+                    // spending and receiving same bills
+                    if !current_state.bills.contains(&each_bill) {
+                        return 1
+                    }
+                    if double_spend_checker.contains(each_bill) {
+                        return 1
+                    } else {
+                        double_spend_checker.push(each_bill.clone());
+                    }
+                    // serial_number already seen fails
+                    return 0;
+                }).sum();
+                if total_received <= total_spent && is_valid_receive == 0 && is_valid_spends == 0 {
+                    // remove the current bills from the circulating bills
+                    current_state.bills = current_state.bills.iter().filter(|each_bill| !spends.contains(each_bill)).cloned().collect();
+                    // add new bills
+                    for each_bill in receives {
+                        let mut new_bill = each_bill.clone();
+                        current_state.add_bill(new_bill.clone());
+                    }
+                }
+            },
+        }
+        return current_state
     }
 }
 

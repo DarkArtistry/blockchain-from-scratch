@@ -58,7 +58,133 @@ impl StateMachine for Atm {
     type Transition = Action;
 
     fn next_state(starting_state: &Self::State, t: &Self::Transition) -> Self::State {
-        todo!("Exercise 4")
+        // todo!("Exercise 4")
+        match &starting_state.expected_pin_hash {
+            Auth::Waiting => {
+                match t {
+                    Action::SwipeCard(correct_hash) => {
+                        return Atm {
+                            cash_inside: starting_state.cash_inside,
+                            expected_pin_hash: Auth::Authenticating(correct_hash.clone()),
+                            keystroke_register: starting_state.keystroke_register.clone(),
+                        }
+                    },
+                    Action::PressKey(pressed_key) => {
+                        return Atm {
+                            cash_inside: starting_state.cash_inside,
+                            expected_pin_hash: starting_state.expected_pin_hash.clone(),
+                            keystroke_register: starting_state.keystroke_register.clone(),
+                        }
+                    },
+                }
+            },
+            Auth::Authenticating(number) => {
+                match t {
+                    Action::SwipeCard(correct_hash) => {
+                        return Atm {
+                            cash_inside: starting_state.cash_inside,
+                            expected_pin_hash: starting_state.expected_pin_hash.clone(),
+                            keystroke_register: starting_state.keystroke_register.clone(),
+                        }
+                    },
+                    Action::PressKey(pressed_key) => {
+                        if *pressed_key != Key::Enter {
+                            let mut current_keys = starting_state.keystroke_register.clone();
+                            current_keys.push(pressed_key.clone());
+                            return Atm {
+                                cash_inside: starting_state.cash_inside,
+                                expected_pin_hash: starting_state.expected_pin_hash.clone(),
+                                keystroke_register: current_keys,
+                            }
+                        } else {
+                            // check if expected is equal to keystroke
+                            match starting_state.expected_pin_hash {
+                                Auth::Authenticating(correct_hash) => {
+                                    if correct_hash == crate::hash(&starting_state.keystroke_register) {
+                                        return Atm {
+                                            cash_inside: starting_state.cash_inside,
+                                            expected_pin_hash: Auth::Authenticated,
+                                            keystroke_register: Vec::new(),
+                                        }
+                                    } else {
+                                        return Atm {
+                                            cash_inside: starting_state.cash_inside,
+                                            expected_pin_hash: Auth::Waiting,
+                                            keystroke_register: Vec::new(),
+                                        };
+                                    }
+                                },
+                                _ => {
+                                    return Atm {
+                                        cash_inside: starting_state.cash_inside,
+                                        expected_pin_hash: Auth::Waiting,
+                                        keystroke_register: Vec::new(),
+                                    };
+                                }
+                            }
+                        }
+                    },
+                }
+            },
+            Auth::Authenticated => {
+                match t {
+                    Action::SwipeCard(correct_hash) => {
+                        return starting_state.clone()
+                    },
+                    Action::PressKey(pressed_key) => {
+                        if *pressed_key != Key::Enter {
+                            let mut new_key_state = starting_state.keystroke_register.clone();
+                            new_key_state.push(pressed_key.clone());
+                            return Atm {
+                                cash_inside: starting_state.cash_inside,
+                                expected_pin_hash: starting_state.expected_pin_hash.clone(),
+                                keystroke_register: new_key_state,
+                            }
+                        } else {
+                            let mut entered_amount = "".to_string();
+                            for keyed in starting_state.keystroke_register.clone() {
+                                match keyed {
+                                    Key::One => {
+                                        entered_amount.push_str("1");
+                                    },
+                                    Key::Two => {
+                                        entered_amount.push_str("2");
+                                    },
+                                    Key::Three => {
+                                        entered_amount.push_str("3");
+                                    },
+                                    Key::Four => {
+                                        entered_amount.push_str("4");
+                                    },
+                                    _ => {}
+                                }
+                            }
+                            // Parse the concatenated string to a u64
+                            let final_amount: u64 = match entered_amount.parse() {
+                                Ok(num) => num,
+                                Err(_) => {
+                                    println!("Failed to parse entered amount");
+                                    0 // Handle the error as needed, here we return 0
+                                }
+                            };
+                            if final_amount > starting_state.cash_inside {
+                                return Atm {
+                                    cash_inside: starting_state.cash_inside,
+                                    expected_pin_hash: Auth::Waiting,
+                                    keystroke_register: Vec::new(),
+                                }
+                            } else {
+                                return Atm {
+                                    cash_inside: starting_state.cash_inside - final_amount,
+                                    expected_pin_hash: Auth::Waiting,
+                                    keystroke_register: Vec::new(),
+                                }
+                            }
+                        }
+                    },
+                }
+            },
+        };
     }
 }
 

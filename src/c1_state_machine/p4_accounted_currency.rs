@@ -45,7 +45,55 @@ impl StateMachine for AccountedCurrency {
     type Transition = AccountingTransaction;
 
     fn next_state(starting_state: &Balances, t: &AccountingTransaction) -> Balances {
-        todo!("Exercise 1")
+        // todo!("Exercise 1")
+        let mut new_state = starting_state.clone();
+        match t {
+            AccountingTransaction::Mint{ minter, amount } => {
+                let mut current_user_balance = match new_state.get(minter) {
+                    Some(balance) => balance.clone(),
+                    _ => 0
+                };
+                if amount.clone() > 0 {
+                    current_user_balance += amount.clone();
+                    new_state.insert(minter.clone(), current_user_balance);
+                }
+            },
+            AccountingTransaction::Burn { burner, amount } => {
+                let mut current_user_balance = match new_state.get(burner) {
+                    Some(balance) => balance.clone(),
+                    _ => 0
+                };
+                if amount.clone() >= current_user_balance {
+                    new_state.remove(burner);
+                } else {
+                    current_user_balance -= amount.clone();
+                    new_state.insert(burner.clone(), current_user_balance);
+                }
+            }
+            AccountingTransaction::Transfer { sender, receiver, amount } => {
+                if sender == receiver {
+                    return new_state;
+                }
+                let mut current_sender_balance = match new_state.get(sender) {
+                    Some(balance) => balance.clone(),
+                    _ => 0
+                };
+                let mut current_receiver_balance = match new_state.get(receiver) {
+                    Some(balance) => balance.clone(),
+                    _ => 0
+                };
+                if current_sender_balance >= amount.clone() {
+                    current_sender_balance -= amount.clone();
+                    current_receiver_balance += amount.clone();
+                    new_state.insert(sender.clone(), current_sender_balance);
+                    new_state.insert(receiver.clone(), current_receiver_balance);
+                }
+                if current_sender_balance == 0 {
+                    new_state.remove(sender);
+                }
+            }
+        }
+        return new_state
     }
 }
 
