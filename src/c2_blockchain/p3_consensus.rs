@@ -37,12 +37,32 @@ pub struct Header {
 impl Header {
     /// Returns a new valid genesis header.
     fn genesis() -> Self {
-        todo!("Exercise 1")
+        // todo!("Exercise 1")
+        Header {
+            parent: 0,
+            height: 0,
+            extrinsic: 0,
+            state: 0,
+            consensus_digest: 0,
+        }
     }
 
     /// Create and return a valid child header.
     fn child(&self, extrinsic: u64) -> Self {
-        todo!("Exercise 2")
+        // todo!("Exercise 2")
+        let mut new_block = Header {
+            parent: hash(self),
+            height: self.height + 1,
+            extrinsic: extrinsic,
+            state: self.state + extrinsic,
+            consensus_digest: 0,
+        };
+        let mut nonce = 0;
+        while hash(&new_block) > THRESHOLD {
+            nonce += 1;
+            new_block.consensus_digest = nonce;
+        }
+        return new_block;
     }
 
     /// Verify that all the given headers form a valid chain from this header to the tip.
@@ -50,7 +70,35 @@ impl Header {
     /// In addition to all the rules we had before, we now need to check that the block hash
     /// is below a specific threshold.
     fn verify_sub_chain(&self, chain: &[Header]) -> bool {
-        todo!("Exercise 3")
+        // todo!("Exercise 3")
+        let mut verifiable = true;
+        let mut current_height = self.height;
+        let mut current_state = self.state;
+        for (block_idx, header) in chain.iter().enumerate() {
+            if hash(header) >= THRESHOLD {
+                verifiable =  false;
+            }
+            if header.height != current_height + 1 {
+                verifiable =  false;
+            }
+            if header.extrinsic + current_state !=  header.state {
+                verifiable =  false;
+            }
+            if block_idx == 0 {
+                if hash(self) != header.parent {
+                    verifiable =  false;
+                }
+                current_height += 1;
+                current_state += header.extrinsic;
+            } else if block_idx != chain.len() - 1 {
+                if hash(header) != chain[block_idx + 1].parent {
+                    verifiable =  false;
+                }
+                current_height += 1;
+                current_state += header.extrinsic;
+            }
+        }
+        verifiable
     }
 
     // After the blockchain ran for a while, a political rift formed in the community.
@@ -62,13 +110,91 @@ impl Header {
     /// verify that the given headers form a valid chain.
     /// In this case "valid" means that the STATE MUST BE EVEN.
     fn verify_sub_chain_even(&self, chain: &[Header]) -> bool {
-        todo!("Exercise 4")
+        // todo!("Exercise 4")
+        let mut verifiable = true;
+        let mut current_height = self.height;
+        let mut current_state = self.state;
+        if current_state % 2 == 1 && self.height > FORK_HEIGHT {
+            println!("1");
+            verifiable = false;
+        }
+        for (block_idx, header) in chain.iter().enumerate() {
+            if hash(header) >= THRESHOLD {
+                println!("2");
+                verifiable =  false;
+            }
+            if header.height != current_height + 1 {
+                println!("3");
+                verifiable =  false;
+            }
+            if header.extrinsic + current_state !=  header.state {
+                println!("4");
+                verifiable =  false;
+            }
+            if block_idx == 0 {
+                if hash(self) != header.parent {
+                    println!("5");
+                    verifiable =  false;
+                }
+            } else if block_idx != chain.len() - 1 {
+                if hash(header) != chain[block_idx + 1].parent {
+                    println!("6");
+                    verifiable =  false;
+                }
+            }
+            current_height += 1;
+            current_state += header.extrinsic;
+            if current_state % 2 == 1 && current_height > FORK_HEIGHT {
+                println!("7");
+                verifiable =  false;
+            }
+        }
+        verifiable
     }
 
     /// verify that the given headers form a valid chain.
     /// In this case "valid" means that the STATE MUST BE ODD.
     fn verify_sub_chain_odd(&self, chain: &[Header]) -> bool {
-        todo!("Exercise 5")
+        // todo!("Exercise 5")
+        let mut verifiable = true;
+        let mut current_height = self.height;
+        let mut current_state = self.state;
+        if current_state % 2 == 0 && self.height > FORK_HEIGHT {
+            println!("1");
+            verifiable = false;
+        }
+        for (block_idx, header) in chain.iter().enumerate() {
+            if hash(header) >= THRESHOLD {
+                println!("3");
+                verifiable =  false;
+            }
+            if header.height != current_height + 1 {
+                println!("4");
+                verifiable =  false;
+            }
+            if header.extrinsic + current_state !=  header.state {
+                println!("5");
+                verifiable =  false;
+            }
+            if block_idx == 0 {
+                if hash(self) != header.parent {
+                    println!("6");
+                    verifiable =  false;
+                }
+            } else if block_idx != chain.len() - 1 {
+                if hash(header) != chain[block_idx + 1].parent {
+                    println!("7");
+                    verifiable =  false;
+                }
+            }
+            current_height += 1;
+            current_state += header.extrinsic;
+            if current_state % 2 == 0 && current_height > FORK_HEIGHT {
+                println!("8");
+                verifiable = false;
+            }
+        }
+        verifiable
     }
 }
 
@@ -89,7 +215,58 @@ impl Header {
 /// G -- 1 -- 2
 ///            \-- 3'-- 4'
 fn build_contentious_forked_chain() -> (Vec<Header>, Vec<Header>, Vec<Header>) {
-    todo!("Exercise 6")
+    // todo!("Exercise 6")
+    let mut blockchain_0:Vec<Header> = Vec::new();
+    let mut blockchain_1:Vec<Header> = Vec::new();
+    let mut blockchain_2:Vec<Header> = Vec::new();
+    // genesis block
+    let genesis = Header::genesis();
+    let genesis_child = genesis.child(1);
+    blockchain_0.push(genesis.clone());
+    blockchain_0.push(genesis_child.clone());
+
+    for i in 1..5 {
+
+        let mut odd_number: u64  = i.clone();
+        if blockchain_1.len() == 0 {
+            while (blockchain_0[1].state + (odd_number.clone() as u64) ) % 2 != 1 {
+                if (blockchain_0[1].state + (odd_number.clone() as u64) )% 2 != 1 {
+                    odd_number += 1;
+                }
+            }
+            let new_block = blockchain_0[1].child( odd_number);
+            blockchain_1.push(new_block.clone());
+        } else {
+            while (blockchain_1[blockchain_1.len() - 1].state + (odd_number.clone() as u64) ) % 2 != 1 {
+                if (blockchain_1[blockchain_1.len() - 1].state + (odd_number.clone() as u64) )% 2 != 1 {
+                    odd_number += 1;
+                }
+            }
+            let new_block = blockchain_1[blockchain_1.len() - 1].child( odd_number);
+            blockchain_1.push(new_block.clone());
+        }
+
+        let mut even_number: u64 = i.clone();
+        if blockchain_2.len() == 0 {
+            while (blockchain_0[1].state + even_number) % 2 != 0 {
+                if (blockchain_0[1].state + even_number) % 2 != 0 {
+                    even_number += 1;
+                }
+            }
+            let new_block_2 = blockchain_0[1].child(even_number);
+            blockchain_2.push(new_block_2.clone());
+        } else {
+            while (blockchain_2[blockchain_2.len() - 1].state + even_number) % 2 != 0 {
+                if (blockchain_2[blockchain_2.len() - 1].state + even_number) % 2 != 0 {
+                    even_number += 1;
+                }
+            }
+            let new_block_2 = blockchain_2[blockchain_2.len() - 1].child(even_number);
+            blockchain_2.push(new_block_2.clone());
+        }
+
+    }
+    return (blockchain_0, blockchain_2, blockchain_1);
 }
 
 // To run these tests: `cargo test bc_3`
@@ -226,7 +403,7 @@ fn bc_3_even_chain_valid() {
                           // we need to keep it that way. So add evens
     let b3 = b2.child(1); // 4
     let b4 = b3.child(2); // 6
-
+    println!("g.verify_sub_chain_even(&[b1, b2, b3, b4]) : {:?}", g.verify_sub_chain_even(&[b1.clone(), b2.clone(), b3.clone(), b4.clone()]));
     assert!(g.verify_sub_chain_even(&[b1, b2, b3, b4]));
 }
 

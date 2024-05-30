@@ -107,10 +107,7 @@ impl StateMachine for DigitalCashSystem {
             }
             CashTransaction::Transfer { spends, receives } => {
                 // let spends_clone = spends.iter().filter(|each_bill| current_state.bills.contains(each_bill)).cloned();
-                let total_spent: u64 = spends.iter().map(|each_bill| each_bill.amount).sum();
-                let total_received: u64 = receives.iter().map(|each_bill| each_bill.amount).sum();
                 let spend_serials: Vec<u64> = spends.iter().map(|each_bill| each_bill.serial.clone()).collect();
-                // if there's a bill that is not valid, cancel all transfers
                 let is_valid_receive: u64 = receives.iter().map(|each_bill| {
                     // spending and receiving same bills
                     if spend_serials.contains(&each_bill.serial) {
@@ -126,17 +123,27 @@ impl StateMachine for DigitalCashSystem {
                     if each_bill.amount.checked_add(1).is_none() {
                         println!("DETECTED MAX VALUE");
                         return 1;
-                    } else {
-                        println!("NO MAX VALUE DETECTED");
+                    }
+                    println!("each_bill.amount: {:?}", each_bill.amount);
+                    if each_bill.amount.checked_add(1).is_none() {
+                        println!("DETECTED MAX VALUE for amount: {}", each_bill.amount);
+                        return 1;
                     }
                     // serial_number already seen fails
-                    return 0;
+                    0
                 }).sum();
+                if is_valid_receive > 0 {
+                    return current_state;
+                }
+                let total_spent: u64 = spends.iter().map(|each_bill| each_bill.amount).sum();
+                let total_received: u64 = receives.iter().map(|each_bill| each_bill.amount).sum();
+                // if there's a bill that is not valid, cancel all transfers
+                let mut overflow_detected = false;
                 let mut double_spend_checker: Vec<Bill> = Vec::new();
                 // Spending Bills with incorect amount
                 let is_valid_spends: u64 = spends.iter().map(|each_bill| {
                     // spending and receiving same bills
-                    if !current_state.bills.contains(each_bill) {
+                    if !current_state.bills.contains(&each_bill) {
                         return 1
                     }
                     if double_spend_checker.contains(each_bill) {
