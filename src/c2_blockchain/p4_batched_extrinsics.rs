@@ -2,6 +2,7 @@
 //! Now, we stop relying solely on headers, and instead, create complete blocks.
 
 use crate::hash;
+
 type Hash = u64;
 
 /// The header no longer contains an extrinsic directly. Rather a vector of extrinsics will be stored in
@@ -28,14 +29,29 @@ pub struct Header {
 impl Header {
     /// Returns a new valid genesis header.
     pub fn genesis() -> Self {
-        todo!("Exercise 1")
+        // todo!("Exercise 1")
+        Header {
+            parent: 0,
+            height: 0,
+            extrinsics_root: hash(&Vec::<u64>::new()),
+            state: 0,
+            consensus_digest: 0,
+        }
     }
 
     /// Create and return a valid child header.
     /// Without the extrinsics themselves, we cannot calculate the final state
     /// so that information is passed in.
     pub fn child(&self, extrinsics_root: Hash, state: u64) -> Self {
-        todo!("Exercise 2")
+        // todo!("Exercise 2")
+        let mut new_block = Header {
+            parent: hash(self),
+            height: self.height + 1,
+            extrinsics_root: extrinsics_root,
+            state: state,
+            consensus_digest: 0,
+        };
+        return new_block;
     }
 
     /// Verify a single child header.
@@ -46,7 +62,8 @@ impl Header {
     /// subtask of checking an entire block. So it doesn't make sense to check
     /// the entire header chain at once if the chain may be invalid at the second block.
     fn verify_child(&self, child: &Header) -> bool {
-        todo!("Exercise 3")
+        // todo!("Exercise 3")
+        child.parent == hash(self)
     }
 
     /// Verify that all the given headers form a valid chain from this header to the tip.
@@ -57,7 +74,16 @@ impl Header {
     ///  * with head recursion
     ///  * with tail recursion
     fn verify_sub_chain(&self, chain: &[Header]) -> bool {
-        todo!("Exercise 4")
+        // todo!("Exercise 4")
+        let mut parent = self;
+        for child in chain {
+            if !parent.verify_child(child) {
+                return false;
+            } else {
+                parent = child;
+            }
+        };
+        true
     }
 }
 
@@ -76,20 +102,47 @@ pub struct Block {
 impl Block {
     /// Returns a new valid genesis block. By convention this block has no extrinsics.
     pub fn genesis() -> Self {
-        todo!("Exercise 5")
+        // todo!("Exercise 5")
+        let new_header = Header::genesis();
+        Block { header: new_header, body: Vec::new() }
     }
 
     /// Create and return a valid child block.
     /// The extrinsics are batched now, so we need to execute each of them.
     pub fn child(&self, extrinsics: Vec<u64>) -> Self {
-        todo!("Exercise 6")
+        // todo!("Exercise 6")
+        let mut new_extrinsics = extrinsics.clone();
+        println!("new_extrinsics : {:?}", new_extrinsics);
+        let mut length = extrinsics.len();
+        let mut new_header: Header;
+        
+        if length > 0 {
+            new_header = self.header.child(hash(&new_extrinsics), 0);
+        } else {
+            new_header = self.header.child(hash(&Vec::<u64>::new()), 0);
+        }
+
+        println!("new_extrinsics : {:?}", new_extrinsics);
+
+        Block { header: new_header, body: new_extrinsics }
     }
 
     /// Verify that all the given blocks form a valid chain from this block to the tip.
     ///
     /// We need to verify the headers as well as execute all transactions and check the final state.
     pub fn verify_sub_chain(&self, chain: &[Block]) -> bool {
-        todo!("Exercise 7")
+        // todo!("Exercise 7");
+        let mut parent = self;
+        for block in chain {
+            if !parent.header.verify_child(&block.header) {
+                return false;
+            }
+            if block.header.extrinsics_root != hash(&parent.body) {
+                return false;
+            }
+            parent = block;
+        }
+        true
     }
 }
 
@@ -103,6 +156,7 @@ impl Block {
 /// Notice that you do not need the entire parent block to do this. You only need the header.
 fn build_invalid_child_block_with_valid_header(parent: &Header) -> Block {
     todo!("Exercise 8")
+    
 }
 
 #[test]
